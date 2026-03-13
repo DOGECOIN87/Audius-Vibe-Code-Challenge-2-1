@@ -328,7 +328,7 @@ export default function App() {
         {/* Animated Vector Background */}
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
-          className="absolute inset-0 w-full h-full opacity-20"
+          className="absolute inset-0 w-full h-full opacity-60"
         >
           <defs>
             <path 
@@ -424,7 +424,7 @@ export default function App() {
               key={currentArtwork}
               initial={{ opacity: 0 }}
               animate={{ 
-                opacity: 0.4, 
+                opacity: 0.15, 
                 x: [0, 20, -20, 0],
                 y: [0, -20, 20, 0]
               }}
@@ -464,7 +464,7 @@ export default function App() {
           style={{ scale: orbScale2 }}
         />
 
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/40 via-[#050505]/70 to-[#050505]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/20 via-[#050505]/50 to-[#050505]" />
         
         {/* Floating Dust Particles */}
         {particles.map((particle) => (
