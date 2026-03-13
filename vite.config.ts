@@ -4,7 +4,7 @@ import path from 'path';
 import {defineConfig, loadEnv} from 'vite';
 
 export default defineConfig(({mode}) => {
-  const base = mode === 'production' ? '/Audius-Vibe-Code-Challenge-2-1/' : '/';
+  const base = '/Audius-Vibe-Code-Challenge-2-1/';
   const env = loadEnv(mode, '.', '');
   return {
     base,
