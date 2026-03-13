@@ -8,6 +8,45 @@ import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX, Loader2, Music, S
 import { motion, AnimatePresence, useMotionValue, useTransform, useAnimationFrame, useMotionTemplate } from 'motion/react';
 
 const APP_NAME = 'womens_history_month_app';
+
+const getAudiusImageUrl = (url: string, mirrors: string[]) => {
+  if (!url) return '';
+
+  const tryLoadImage = (src: string, resolve: (value: string) => void, reject: (reason?: any) => void) => {
+    const img = new Image();
+    img.onload = () => resolve(src);
+    img.onerror = () => reject();
+    img.src = src;
+  };
+
+  return new Promise<string>((resolve) => {
+    const urlsToTry = [url, ...mirrors.map(mirror => {
+      try {
+        const originalUrlObj = new URL(url);
+        const mirrorUrlObj = new URL(mirror);
+        originalUrlObj.host = mirrorUrlObj.host;
+        return originalUrlObj.toString();
+      } catch (e) {
+        console.warn("Invalid URL or mirror", e);
+        return '';
+      }
+    }).filter(Boolean)];
+
+    let currentIndex = 0;
+    const attemptLoad = () => {
+      if (currentIndex < urlsToTry.length) {
+        tryLoadImage(urlsToTry[currentIndex], resolve, () => {
+          currentIndex++;
+          attemptLoad();
+        });
+      } else {
+        resolve(url); // Fallback to original if all mirrors fail
+      }
+    };
+    attemptLoad();
+  });
+};
+
 const PLAYLIST_API_URL = `https://api.audius.co/v1/playlists/dp2Vo4m?app_name=${APP_NAME}`;
 
 export default function App() {
@@ -319,7 +358,39 @@ export default function App() {
   const currentTrack = currentTrackIndex >= 0 ? tracks[currentTrackIndex] : null;
   const streamUrl = currentTrack ? `https://api.audius.co/v1/tracks/${currentTrack.id}/stream?app_name=${APP_NAME}` : undefined;
   
-  const currentArtwork = currentTrack?.artwork?.['1000x1000'] || currentTrack?.artwork?.['480x480'] || playlist?.artwork?.['1000x1000'] || playlist?.artwork?.['480x480'];
+    const [resolvedArtworkUrl, setResolvedArtworkUrl] = useState<string | null>(null);
+  const [resolvedPlaylistArtworkUrl, setResolvedPlaylistArtworkUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const resolveArtwork = async () => {
+      if (currentTrack?.artwork) {
+        const primaryUrl = currentTrack.artwork['1000x1000'] || currentTrack.artwork['480x480'];
+        const mirrors = currentTrack.artwork.mirrors || [];
+        const resolvedUrl = await getAudiusImageUrl(primaryUrl, mirrors);
+        setResolvedArtworkUrl(resolvedUrl);
+      } else {
+        setResolvedArtworkUrl(null);
+      }
+    };
+    resolveArtwork();
+  }, [currentTrack]);
+
+  useEffect(() => {
+    const resolvePlaylistArtwork = async () => {
+      if (playlist?.artwork) {
+        const primaryUrl = playlist.artwork['1000x1000'] || playlist.artwork['480x480'];
+        const mirrors = playlist.artwork.mirrors || [];
+        const resolvedUrl = await getAudiusImageUrl(primaryUrl, mirrors);
+        setResolvedPlaylistArtworkUrl(resolvedUrl);
+      } else {
+        setResolvedPlaylistArtworkUrl(null);
+      }
+    };
+    resolvePlaylistArtwork();
+  }, [playlist]);
+
+  const currentArtwork = resolvedArtworkUrl || resolvedPlaylistArtworkUrl;
+
 
   return (
     <div className="min-h-screen bg-[#050505] text-zinc-50 font-sans pb-40 selection:bg-fuchsia-500/30 relative overflow-x-hidden">
@@ -501,9 +572,7 @@ export default function App() {
           >
             <div className="w-56 h-56 md:w-72 md:h-72 shrink-0 rounded-3xl overflow-hidden shadow-2xl shadow-black/60 ring-1 ring-white/10 bg-zinc-900 relative z-10">
               {playlist?.artwork ? (
-                <img 
-                  src={playlist.artwork['1000x1000'] || playlist.artwork['480x480']} 
-                  alt={playlist.playlist_name}
+                  <img src={resolvedPlaylistArtworkUrl || undefined}                 alt={playlist.playlist_name}
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   referrerPolicy="no-referrer"
                 />
@@ -791,8 +860,8 @@ export default function App() {
                 style={{ scale: expandedArtworkScale }}
                 className="w-[75vw] h-[75vw] max-w-[350px] max-h-[350px] md:max-w-[500px] md:max-h-[500px] rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl shadow-black/80 ring-1 ring-white/20 mb-8 md:mb-12"
               >
-                {currentTrack.artwork ? (
-                  <img src={currentTrack.artwork['1000x1000'] || currentTrack.artwork['480x480']} alt={currentTrack.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                {resolvedArtworkUrl ? (
+                  <img src={resolvedArtworkUrl} alt={currentTrack.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 ) : (
                   <div className="w-full h-full bg-zinc-800 flex items-center justify-center">
                     <Music className="w-32 h-32 text-zinc-600" />
